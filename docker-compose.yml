@@ -1,0 +1,103 @@
+version: '3'
+
+networks:
+  backend:
+    driver: bridge
+
+services:
+#  mysql:
+#    image: mysql:8.0
+#    command: --default-authentication-plugin=mysql_native_password
+#    environment:
+#      MYSQL_ROOT_PASSWORD: password
+#      MYSQL_DATABASE: magento2
+#      MYSQL_USER: magento
+#      MYSQL_PASSWORD: magento
+#    ports:
+#      - '4306:3306'
+#    networks:
+#      - backend
+
+  db:
+    image: postgres:14.1-alpine
+    restart: always
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    ports:
+      - '5433:5432'
+    networks:
+      - backend
+
+  nginx:
+    build:
+      context: .docker/nginx
+    volumes:
+      - './code:/var/www/html'
+    restart: always
+    ports:
+      - "8080:80"
+      - "443:443"
+    networks:
+      - backend
+
+  php-fpm:
+    build:
+      context: .docker/php-fpm
+    environment:
+      - PHP_IDE_CONFIG="serverName=symfony.local"
+      - PHP_IDE_CONFIG=serverName=symfony.local
+      # without second line don't work xdebug in phpstorm, we need duplicate with only difference in quotes symbols. idk why)))
+    volumes:
+      - './code:/var/www/html'
+      - './.docker/php-fpm/xdebug.ini:/usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini'
+      - './.docker/php-fpm/error_reporting.ini:/usr/local/etc/php/conf.d/error_reporting.ini'
+      - './.docker/php-fpm/php.ini:/usr/local/etc/php/conf.d/php.ini'
+    restart: always
+    ports:
+      - 9000:9000
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - backend
+
+  rabbitmq:
+    image: rabbitmq:3.9-management-alpine
+    ports:
+      - 5672:5672
+      - 15672:15672
+    networks:
+      - backend
+    environment:
+      RABBITMQ_DEFAULT_USER: symfony
+      RABBITMQ_DEFAULT_PASS: symfony
+
+  opensearch:
+    image: markoshust/magento-opensearch:2.4-develop
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    env_file: .docker/opensearch/opensearch.env
+    environment:
+      - "discovery.type=single-node"
+      - "cluster.routing.allocation.disk.threshold_enabled=false"
+      - "index.blocks.read_only_allow_delete"
+    networks:
+      - backend
+
+  redis:
+    image: redis:7.0-alpine
+    ports:
+      - 6379:6379
+    networks:
+      - backend
+
+volumes:
+  code:
+  mysql:
+  redis:
+  opensearch:
+  rabbitmq:
+
+
+
