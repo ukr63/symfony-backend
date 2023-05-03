@@ -27,6 +27,7 @@ RUN apt-get update && apt-get install -y \
     procps \
     vim \
     zip \
+    libpq-dev \
   && rm -rf /var/lib/apt/lists/*
 
 RUN pecl channel-update pecl.php.net && pecl install \
@@ -60,6 +61,9 @@ RUN docker-php-ext-configure \
     sysvshm \
     xsl \
     zip \
+    pdo \
+    pdo_pgsql \
+    pgsql \
   && docker-php-ext-enable \
     imagick \
     redis \
